@@ -110,9 +110,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
           x_(1) = meas_package.raw_measurements_(1);
       }
       else if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
-          float rho = meas_package.raw_measurements_(0);
-          float phi = meas_package.raw_measurements_(1);
-          float rho_dot = meas_package.raw_measurements_(2);
+          double rho = meas_package.raw_measurements_(0);
+          double phi = meas_package.raw_measurements_(1);
+          double rho_dot = meas_package.raw_measurements_(2);
           x_(0) = rho * cos(phi); // convert polar to cartesian
           x_(1) = rho * sin(phi); // convert polar to cartesian
       }
@@ -124,9 +124,17 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   }
 
   // predict
-  
+  double delta_t = (meas_package.timestamp_ - time_us_) / 1000000.0;
+  time_us_ = meas_package.timestamp_;
+  Prediction(delta_t);
 
   // update
+  if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+      UpdateLidar(meas_package);
+  }
+  else if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      UpdateRadar(meas_package);
+  }
 }
 
 /**
