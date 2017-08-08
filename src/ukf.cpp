@@ -24,7 +24,7 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 0.2;
+  std_a_ = 1.2;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = 0.2;
@@ -55,27 +55,27 @@ UKF::UKF() {
   is_initialized_ = false;
 
   //set state dimension
-  int n_x_ = 5;
+  n_x_ = 5;
 
   //set augmented dimension
-  int n_aug_ = 7;
+  n_aug_ = 7;
 
   //define spreading parameter
-  double lambda_ = 3 - n_aug_;
+  lambda_ = 3 - n_aug_;
 
   //create vector for weights
   weights_ = VectorXd(2*n_aug_+1);
 
   // predicted sigma points matrix
-  MatrixXd Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
+  Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
-  Xsig_pred_.fill(0.0);
+  //Xsig_pred_.fill(0.0);
 
   // current NIS for radar
-  double NIS_radar_ = 0.0;
+  NIS_radar_ = 0.0;
 
   // current NIS for laser
-  double NIS_laser_ = 0.0;
+  NIS_laser_ = 0.0;
 
 }
 
@@ -95,24 +95,24 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
   if (!is_initialized_) {
       // initialise state
-      x_ << 1, 1, 1, 1, 0.1;
+      x_ << 0, 0, 0, 0, 0;
 
       // initialise covariance matrix
       P_ <<
-            1, 0, 0, 0, 0,
-            0, 1, 0, 0, 0,
-            0, 0, 1, 0, 0,
-            0, 0, 0, 1, 0,
-            0, 0, 0, 0, 1;
+            0.3, 0, 0, 0, 0,
+            0, 0.3, 0, 0, 0,
+            0, 0, 0.3, 0, 0,
+            0, 0, 0, 0.3, 0,
+            0, 0, 0, 0, 0.3;
 
       // initialise timestamp
       time_us_ = meas_package.timestamp_;
 
-      if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
+      if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
           x_(0) = meas_package.raw_measurements_(0);
           x_(1) = meas_package.raw_measurements_(1);
       }
-      else if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
+      else if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
           double ro = meas_package.raw_measurements_(0);
           double phi = meas_package.raw_measurements_(1);
           double ro_dot = meas_package.raw_measurements_(2);
@@ -129,14 +129,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   // predict
   double delta_t = (meas_package.timestamp_ - time_us_) / 1000000.0;
   time_us_ = meas_package.timestamp_;
-  UKF::Prediction(delta_t);
+  std::cout << "delta_t process measurement=" << delta_t << std::endl << std::endl;
+  Prediction(delta_t);
 
   // update
-  if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
-      UKF::UpdateLidar(meas_package);
+  if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
+      //UpdateLidar(meas_package);
   }
-  else if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
-      UKF::UpdateRadar(meas_package);
+  else if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
+      //UpdateRadar(meas_package);
   }
 }
 
@@ -171,7 +172,7 @@ void UKF::Prediction(double delta_t) {
   //create augmented mean vector
    VectorXd x_aug = VectorXd(n_aug_);
 
-   //create augmented mean state
+  //create augmented mean state
    x_aug.fill(0.0);
    x_aug.head(n_x_) = x_;
 
@@ -214,14 +215,14 @@ void UKF::Prediction(double delta_t) {
       //predicted state values
       double px_p, py_p;
 
-      //avoid division by zero
-      if (fabs(yawd) > 0.001) {
-          px_p = p_x + v/yawd * ( sin (yaw + yawd*delta_t) - sin(yaw));
-          py_p = p_y + v/yawd * ( cos(yaw) - cos(yaw+yawd*delta_t) );
+     //avoid division by zero
+      if (fabs(yawd) > 0.0001) {
+          px_p = p_x + v / yawd * ( sin (yaw + yawd*delta_t) - sin(yaw));
+          py_p = p_y + v / yawd * ( cos(yaw) - cos(yaw+yawd*delta_t) );
       }
       else {
-          px_p = p_x + v*delta_t*cos(yaw);
-          py_p = p_y + v*delta_t*sin(yaw);
+          px_p = p_x + v * delta_t * cos(yaw);
+          py_p = p_y + v * delta_t * sin(yaw);
       }
 
       double v_p = v;
@@ -243,6 +244,7 @@ void UKF::Prediction(double delta_t) {
       Xsig_pred_(3,i) = yaw_p;
       Xsig_pred_(4,i) = yawd_p;
     }
+/*     cout << Xsig_pred_ << endl << endl ;
 
     // predicted mean and covariance
     // set weights
@@ -270,7 +272,7 @@ void UKF::Prediction(double delta_t) {
       while (x_diff(3)< -M_PI) x_diff(3)+=2.*M_PI;
 
       P_ += weights_(i) * x_diff * x_diff.transpose() ;
-    }
+  }*/
 
 }
 
