@@ -24,10 +24,10 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 1.2;
+  std_a_ = 1.4;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.2;
+  std_yawdd_ = 0.4;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -68,8 +68,7 @@ UKF::UKF() {
 
   // predicted sigma points matrix
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
-
-  //Xsig_pred_.fill(0.0);
+  Xsig_pred_.fill(0.0);
 
   // current NIS for radar
   NIS_radar_ = 0.0;
@@ -97,20 +96,21 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       // initialise state
       x_ << 0, 0, 0, 0, 0;
 
-      // initialise covariance matrix
-      P_ <<
-            0.3, 0, 0, 0, 0,
-            0, 0.3, 0, 0, 0,
-            0, 0, 0.3, 0, 0,
-            0, 0, 0, 0.3, 0,
-            0, 0, 0, 0, 0.3;
-
       // initialise timestamp
       time_us_ = meas_package.timestamp_;
 
       if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
           x_(0) = meas_package.raw_measurements_(0);
           x_(1) = meas_package.raw_measurements_(1);
+
+          // initialise covariance matrix
+          P_ <<
+                0.3, 0, 0, 0, 0,
+                0, 0.3, 0, 0, 0,
+                0, 0, 0.3, 0, 0,
+                0, 0, 0, 0.3, 0,
+                0, 0, 0, 0, 0.3;
+
       }
       else if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
           double ro = meas_package.raw_measurements_(0);
@@ -118,6 +118,14 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
           double ro_dot = meas_package.raw_measurements_(2);
           x_(0) = ro * cos(phi); // convert polar to cartesian
           x_(1) = ro * sin(phi); // convert polar to cartesian
+
+          // initialise covariance matrix
+          P_ <<
+                0.1, 0, 0, 0, 0,
+                0, 0.1, 0, 0, 0,
+                0, 0, 0.3, 0, 0,
+                0, 0, 0, 0.3, 0,
+                0, 0, 0, 0, 0.3;
       }
 
       // initialisation complete
@@ -129,15 +137,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   // predict
   double delta_t = (meas_package.timestamp_ - time_us_) / 1000000.0;
   time_us_ = meas_package.timestamp_;
-  std::cout << "delta_t process measurement=" << delta_t << std::endl << std::endl;
+  //std::cout << "delta_t process measurement=" << delta_t << std::endl << std::endl;
   Prediction(delta_t);
 
   // update
   if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
-      //UpdateLidar(meas_package);
+      UpdateLidar(meas_package);
   }
   else if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
-      //UpdateRadar(meas_package);
+      UpdateRadar(meas_package);
   }
 }
 
@@ -244,7 +252,7 @@ void UKF::Prediction(double delta_t) {
       Xsig_pred_(3,i) = yaw_p;
       Xsig_pred_(4,i) = yawd_p;
     }
-/*     cout << Xsig_pred_ << endl << endl ;
+    //cout << Xsig_pred_ << endl << endl ;
 
     // predicted mean and covariance
     // set weights
@@ -272,7 +280,7 @@ void UKF::Prediction(double delta_t) {
       while (x_diff(3)< -M_PI) x_diff(3)+=2.*M_PI;
 
       P_ += weights_(i) * x_diff * x_diff.transpose() ;
-  }*/
+  }
 
 }
 
